@@ -1,6 +1,6 @@
 1 # spectrum style code; 1 = within a given latitude range, over equally-sized mu bins
--2.0 1.0 # minimum latitude, maximum latitude (planetocentric?)
-0.5 # mu_min, limit of mu. spectrum will be in between mu_min values on either side of the meridian. mu = cos(emission angle), and past 60 deg emission angle (0.5 mu) we start to worry about limb darkening. So without limb darkening corrections, stay below mu = 0.5.
-8 # total number of mu bins. if odd, will have center bin straddling the meridian (probably best).  If even, will have a bin split by the meridian
-1 # on/off switch for averaging across the meridian. 1 = will average radiance from same mu bins across meridian. 0 = will keep them seperate
-0.3 # fraction of bin size, amount of overlap between bins (make 0 if want discrete bins w/ no overlap)
+-5.0 3.0 # minimum latitude, maximum latitude (planetocentric) # mess with this
+0.5 # mu_min, limit of mu. spectrum will be in between mu_min values on either side of the meridian. mu = cos(emission angle), and past 60 deg emission angle (0.5 mu) we start to worry about limb darkening. So without limb darkening corrections, stay above mu = 0.5. can change range = 0.5-1
+8 # total number of mu bins. if odd, will have center bin straddling the meridian (probably best).  If even, will have a bin split by the meridian. Can change this too
+1 # on/off switch for averaging across the meridian. 1 = will average radiance from same mu bins across meridian. 0 = will keep them seperate. Leave this as 1 for now as of 8/29
+0.3 # fraction of bin size, amount of overlap between bins (make 0 if want discrete bins w/ no overlap). Change this
