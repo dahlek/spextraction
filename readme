@@ -1,0 +1,31 @@
+Spextraction is a code initially written and set up to pull spectra from 2 emission angle bins from Jupiter images taken by SpeX. Eventually, the hope is to generalize the code to other instruments, spectral bins, etc.
+
+To run spextraction:
+
+1. Download spextraction_2.py from github onto sansa; probably easiest to download it locally and then scp it over to sansa
+
+2. Copy + paste the text in kurucz_HST_IRTF.dat on my github into a text file on sansa. This’ll be your solar reference file
+
+3. Make a text file containing the paths+names of the files you want to use to make your spectra; they need to have the same wavelengths as those available from the meancm*.sav files, and only 1 image per wavelength, all from the same night.
+Note: remember that when you save maps for these images, they will overwrite any that already exist at the same wavelength. Always make a new directory, probably with a name including the observation date, to save the maps to. 
+
+4. Make sure you have the other necessary input files and know where you want to save the .spx file.
+
+5. Make sure your .cshrc file contains the following 2 lines:
+setenv LD_LIBRARY_PATH /opt/intel/intelpython3/lib:$LD_LIBRARY_PATH
+set path = (/home/emmadahl/anaconda3/bin/ $path)
+If not, add them, save and source your .cshrc file. Probably a good idea to close and re-open your shell as well. 
+
+5. Before running spextraction, make sure you have pylanetary installed. Enter
+    $ conda activate /home/emmadahl/anaconda3/envs/pylanetary-tester/
+    And if you haven't yet,
+    $ pip install uncertainties
+This should activate the conda environment you need. I'm under the impression that you only need to install the uncertainties package within pylanetary-tester once.
+
+6. Open spextraction_2.py (not the ipynb!), edit your paths or any other variables at the top of the file. 
+
+7. Run it! $ python spextraction_2.py
+
+8. If ran successfully, should make a .spx file and a PDF plot of the I/F spectra
+
+Tip: Turn off plot_maps when running spextraction remotely, otherwise the interactive plotting will slow things way down.
