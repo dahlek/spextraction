@@ -1,7 +1,45 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
+
+
+# Define paths here! the function is run at the bottom of the file, including variable definitions here so you don't have to scroll all the way down.
+
+format_file = '/prvt/ilio/EZDisturbance/haze/cfk/calibcm_for_kennedi/spextraction_input_binned_lat.txt'
+data_list = '/prvt/ilio/EZDisturbance/haze/cfk/calibcm_for_kennedi/data_list_test.txt'
+map_save_location = '/prvt/ilio/EZDisturbance/haze/cfk/calibcm_for_kennedi/test_maps/'
+specfile = './jupiter.spx'
+solarfile = '/prvt/ilio/EZDisturbance/haze/cfk/calibcm_for_kennedi/kurucz_HST_IRTF.dat'
+
+# defaults:
+meancm_path='/prvt/ilio/EZDisturbance/haze/'
+wavelength_keyword='OSF'
+plot_maps=0
+map_load=1
+IF_scale=1
+file_format='Nemesis'
+IF_plot_save_location='./IF_plot.pdf'
+    
+# variable definitions
+'''
+format_file - string, path+name of input file for spectrum bin parameters. contains code for what kind of spectra to make. For now, only 1 format but will change that.
+data_list - text file containing paths+names of images from which to extract spectra. Proabbly just want one image per wavelength and grouped together in time (up to the user how to do that). Will sort by wavelength here so no need to do that in the input file. Will assume that the list contains images of the same target. 
+plot_maps - on/off switch, int. Will plot maps if 1, not if 0.
+specfile - string, path+name of spectrum file to be made and saved. 
+solarfile - file containing solar spectrum. 
+
+# defaults:
+meancm_path - string, path of location of meancm*.sav files. Default here is where Glenn has them saved. 
+map_load - int, on/off switch. 0, will save maps to path defined by map_save_location. 1, will load maps from that location.
+map_save_location - path to location of saved maps. 
+IF_scale = int, 1 or 0. 1, will use python version of calibcm to scale the data to I/F, will automatically make an I/F plot and save it in IF_plot_save_location.
+file_format - string, label for desired format of spectrum file. currently only coded for Nemesis spx files.
+IF_plot_save_location - string, path+name of location to save I/F plots
+'''
+
+
+# In[ ]:
 
 
 import numpy as np
@@ -13,6 +51,7 @@ from pylanetary.navigation import *
 from pylanetary.utils import *
 from uncertainties.umath import *
 from uncertainties import unumpy
+from uncertainties import ufloat
 from scipy import interpolate
 from datetime import datetime
 from datetime import timedelta
@@ -23,7 +62,7 @@ from scipy import ndimage
 from scipy import io
 
 
-# In[3]:
+# In[ ]:
 
 
 '''
@@ -46,7 +85,7 @@ Biggest oustanding issues:
 '''
 
 
-# In[2]:
+# In[ ]:
 
 
 # functions used within map_maker() to generate maps.
@@ -278,7 +317,7 @@ def projposolar(Re,obl,epsilon,latsol,lonsol,se_lon,eoff,poff):
 projposolar_vec = np.vectorize(projposolar)
 
 
-# In[3]:
+# In[ ]:
 
 
 def distance_finder(filename, ut_date='DATE_OBS', ut_time='TIME_OBS', target_name='Jupiter', location_code='568'):
@@ -333,7 +372,7 @@ def distance_finder(filename, ut_date='DATE_OBS', ut_time='TIME_OBS', target_nam
     return distance_au
 
 
-# In[4]:
+# In[ ]:
 
 
 def map_maker(filename, plot_maps=0,  ut_date='DATE_OBS', ut_time='TIME_OBS', target_name='Jupiter', location_code='568', pixelscale=0.115696):
@@ -585,7 +624,7 @@ def map_maker(filename, plot_maps=0,  ut_date='DATE_OBS', ut_time='TIME_OBS', ta
     return iflag,latitude_final,longitude_final,xlon,zen,szen,aphi,data,ob_lon
 
 
-# In[5]:
+# In[ ]:
 
 
 # test:
@@ -593,12 +632,6 @@ def map_maker(filename, plot_maps=0,  ut_date='DATE_OBS', ut_time='TIME_OBS', ta
 
 
 # In[ ]:
-
-
-
-
-
-# In[6]:
 
 
 def spex_wavelengths(filename):
@@ -648,7 +681,7 @@ def spex_wavelengths(filename):
         return
 
 
-# In[8]:
+# In[ ]:
 
 
 def map_saver(dictionary,key,map_save_location,wl):
@@ -665,22 +698,25 @@ def map_saver(dictionary,key,map_save_location,wl):
     np.savetxt(map_save_location+key+'_'+str(wl),wl_dict[key+'_'+str(wl)])
 
 
-# In[22]:
+# In[ ]:
 
 
 # python version of congrid, an idl routine
 
-def calibcm(data, iflag, lat, wavelength, meancm_path='/Users/emmadahl/Desktop/spextraction/meancm/'):
+def calibcm(data, iflag, lat, wavelength, meancm_path='/prvt/ilio/EZDisturbance/haze/'):
     '''
     Finding I/F scaling factors for each wavelength. adapted from Glenn's calibcm*.pro programs
     this requires that tou have the meancm* data for each wavelength. I've copied them here and renamed them to correspond directly to the wavelength instead of filter name
+    !! Need to double check that this is scaling things correctly. Glenn said it does it by latitude, is this code doing that correctly? I thought I translated his code correctly but should double-check. 
+    !! want to add plot of brightnesses on same scale.
+    !! Add a routine here that looks at all available meancm*.sav files in meancm_path, and then ignores wavelengths that aren't there and reports them with an error message. Probably right at beginning.
     
     data - 2D array, data.
     iflag - 2D iflag map. 
     lat - lat map
     mu - 2D array, mu map. don't need, glenn uses it to find the CM of the image
     wavelength - float, wavelength in microns of that file. used to find the right meancm file (right now only able to do 1.58, 1.64, 1.69, 2.12, 2.16, 2.26) 
-    meancm_path - string, path to location of .sav files
+    meancm_path - string, path to location of .sav files. default is their location at JPL.
     '''
     wavelstr = str(wavelength)
     
@@ -688,9 +724,10 @@ def calibcm(data, iflag, lat, wavelength, meancm_path='/Users/emmadahl/Desktop/s
     meancm = io.readsav(meancm_path+meancm_name)
     calibstdcm = meancm['meancm']
     
-    plt.plot(calibstdcm[10:170])
-    plt.ylabel('I/F')
-    plt.show()
+    # !! need to plot these on the same scale. 
+    #plt.plot(calibstdcm[10:170])
+    #plt.ylabel('I/F')
+    #plt.show()
     
     # take the sum of the mean cm values within -80 to +80 deg
     calibstd = np.sum(calibstdcm[10:170])
@@ -704,9 +741,9 @@ def calibcm(data, iflag, lat, wavelength, meancm_path='/Users/emmadahl/Desktop/s
     #cmscan = cmscan[np.where(iflag[:,int(len(data)/2)] != -1)]
     cmscan = cmscan[np.where((lat[:,int(len(data)/2)] > -80)&(lat[:,int(len(data)/2)] < +80))]
     
-    plt.plot(cmscan)
-    plt.ylabel('Raw pixel values')
-    plt.show()
+    #plt.plot(cmscan)
+    #plt.ylabel('Raw pixel values')
+    #plt.show()
     
     # take the sum between 80 and 80 deg lat
     cmtotal = np.sum(cmscan)
@@ -717,7 +754,7 @@ def calibcm(data, iflag, lat, wavelength, meancm_path='/Users/emmadahl/Desktop/s
     return newscale
 
 
-# In[23]:
+# In[ ]:
 
 
 # test calibcm. Need to save data, iflag, and lat from map_maker() first.
@@ -727,19 +764,13 @@ def calibcm(data, iflag, lat, wavelength, meancm_path='/Users/emmadahl/Desktop/s
 # In[ ]:
 
 
-# !!! Make sure this is happening correctly
+# Add error_finder() here. Run it within spextraction_images and return another array w/ error for each average spectrum. maybe after I/F scaling?
 
 
 # In[ ]:
 
 
-
-
-
-# In[9]:
-
-
-def spextraction_images(format_file, data_list, map_save_location, wavelength_keyword='OSF', plot_maps=0, map_load=0, IF_scale=0):
+def spextraction_images(format_file, data_list, map_save_location, wavelength_keyword='OSF', plot_maps=0, map_load=0, IF_scale=0, meancm_path='/prvt/ilio/EZDisturbance/haze/'):
     # !!! change map_save_location
     '''    
     Extract spectra based on user input, using maps generated by map_maker(). This version is for extracting spectra from images. Maybe make other versions later?
@@ -756,6 +787,8 @@ def spextraction_images(format_file, data_list, map_save_location, wavelength_ke
     map_load - int, on/off switch. 0, will save maps to path defined by map_save_location. 1, will load maps from that location.
     map_save_location - path to location of saved maps. 
     IF_scale = int, 1 or 0. 1, will use python version of calibcm to scale the data to I/F
+    meancm_path - string, path to location of .sav files. default is their location at JPL.
+
     
     output:
     arrays for each image/wavelength
@@ -960,7 +993,7 @@ def spextraction_images(format_file, data_list, map_save_location, wavelength_ke
         
         if IF_scale == 1:
             # scale to I/F
-            newscale = calibcm(spxs,iflag_spxs,lat_spxs,wavel)
+            newscale = calibcm(spxs,iflag_spxs,lat_spxs,wavel) # !! assuming default meancm_path.
             print(newscale)
             spxs *= newscale
         elif IF_scale == 0: 
@@ -1019,8 +1052,14 @@ def spextraction_images(format_file, data_list, map_save_location, wavelength_ke
 # In[ ]:
 
 
+
+
+
+# In[ ]:
+
+
 # example test
-#extracted_spectrum_ave, extracted_lat_ave, extracted_long_ave, extracted_emiss_ave, extracted_solar_ave, extracted_azi_ave, wavelengths_sorted, n_bins = spextraction_images('/Users/emmadahl/Desktop/spextraction/spextraction_input_binned_lat.txt', '/Users/emmadahl/Desktop/spextraction/data_list_test.txt', '/Users/emmadahl/Desktop/spextraction/test_maps/', map_load=1, plot_maps=1)
+extracted_spectrum_ave, extracted_lat_ave, extracted_long_ave, extracted_emiss_ave, extracted_solar_ave, extracted_azi_ave, wavelengths_sorted, n_bins, error_estimates = spextraction_images('/Users/emmadahl/Desktop/spextraction/spextraction_input_binned_lat.txt', '/Users/emmadahl/Desktop/spextraction/data_list_test.txt', '/Users/emmadahl/Desktop/spextraction/test_maps_2/', map_load=1, plot_maps=1)
 
 
 # In[ ]:
@@ -1041,9 +1080,8 @@ def spextraction_images(format_file, data_list, map_save_location, wavelength_ke
 # In[ ]:
 
 
-
-
 def IF_plotter(wavelengths_sorted,extracted_spectrum_ave,IF_plot_save_location):
+    
     '''
     plot the I/F spectra, assuming there's 2 of them
     
@@ -1072,13 +1110,12 @@ def IF_plotter(wavelengths_sorted,extracted_spectrum_ave,IF_plot_save_location):
     plt.savefig(IF_plot_save_location, format='pdf')
 
 
-
-# In[10]:
+# In[ ]:
 
 
 # !! this needs to be a subroutine for spextraction, instead of using it here
 
-def spectrum_file_maker(format_file, data_list, map_save_location, specfile, solarfile, wavelength_keyword='OSF', plot_maps=0, map_load=0, IF_scale=0, file_format='Nemesis',IF_plot_save_location='./IF_plot.pdf'):
+def spectrum_file_maker(format_file, data_list, map_save_location, specfile, solarfile, meancm_path='/prvt/ilio/EZDisturbance/haze/', wavelength_keyword='OSF', plot_maps=0, map_load=0, IF_scale=0, file_format='Nemesis',IF_plot_save_location='./IF_plot.pdf'):
     '''
     Makes a NEMESIS spx file of extracted spectra. saves I/F spectra to a figure
     
@@ -1092,23 +1129,27 @@ def spectrum_file_maker(format_file, data_list, map_save_location, specfile, sol
     plot_maps - on/off switch, int. Will plot maps if 1, not if 0.
     specfile - string, path+name of spectrum file to be made and saved. 
     solarfile - file containing solar spectrum. !! need to generate this for guidedog
+    meancm_path - string, path of location of meancm*.sav files. Default here is where Glenn has them saved.
+    
     map_load - int, on/off switch. 0, will save maps to path defined by map_save_location. 1, will load maps from that location.
     map_save_location - path to location of saved maps. 
-    IF_scale = int, 1 or 0. 1, will use python version of calibcm to scale the data to I/F
+    IF_scale = int, 1 or 0. 1, will use python version of calibcm to scale the data to I/F, will automatically make an I/F plot and save it in IF_plot_save_location.
     file_format - string, label for desired format of spectrum file. currently only coded for Nemesis spx files.
     IF_plot_save_location - string, path+name of location to save I/F plots
     '''
     
     # pull spectra using spextraction_images
-    extracted_spectrum_ave, extracted_lat_ave, extracted_long_ave, extracted_emiss_ave, extracted_solar_ave, extracted_azi_ave, wavelengths, n_bins, error_estimate =     spextraction_images(format_file, data_list, map_save_location, wavelength_keyword='OSF', map_load=map_load, plot_maps=plot_maps, IF_scale=IF_scale)
+    extracted_spectrum_ave, extracted_lat_ave, extracted_long_ave, extracted_emiss_ave, extracted_solar_ave, extracted_azi_ave, wavelengths, n_bins, error_estimate =     spextraction_images(format_file, data_list, map_save_location, wavelength_keyword=wavelength_keyword, map_load=map_load, plot_maps=plot_maps, IF_scale=IF_scale)
     
-    # save I/F plots
-    IF_plotter(wavelengths,extracted_spectrum_ave,IF_plot_save_location)
+    if IF_scale == 1:
+        # save I/F plots
+        IF_plotter(wavelengths,extracted_spectrum_ave,IF_plot_save_location)
     
     # !!!! finds the distance for a single image. Fine assumption as long as time between images isn't huge
     distance_file = np.loadtxt(data_list,dtype=str)[0]
     r = distance_finder(distance_file)
 
+    # can probably delete if its being read in. 
     n_bins = 2
     
     # - - - - - - - - - - -
@@ -1163,7 +1204,7 @@ def spectrum_file_maker(format_file, data_list, map_save_location, specfile, sol
                 # raw spectrum value*OPAL correction*IF factor*radiance conversion
                 F_Sol_value = ufloat(F_solar[j],F_solar[j]*0.01) # assuming 1% error on solar spectrum
 
-                # !!! stand-in unit conversion, probably wrong.
+                # !!! stand-in unit conversion, should double-check.
                 #spectrum_value_with_error = ufloat(spec[p][j],0.05*spec[p][j])*1e-7*(1/0.0001)*((F_solar[0]*1e-22)/(r**2)/math.pi/1000) #1e-22 from difference between thullier solar spec files
 
                 #spectrum_value_with_error = ufloat(spec[p][j],error_estimate[0,j])*1e-7*(1/0.0001)*((F_solar[0]*1e-22)/(r**2)/math.pi/1000) #1e-22 from difference between thullier solar spec files
@@ -1178,12 +1219,15 @@ def spectrum_file_maker(format_file, data_list, map_save_location, specfile, sol
         file.close()
 
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# In[ ]:
 
 
+# Run spectrum_file_maker to generate spx files. Change variable names at top of file:
 
-# Run spectrum_file_maker to generate spx files. Change variable names here, add optional keywords if you want to:
-spectrum_file_maker(format_file, data_list, map_save_location, specfile, solarfile)
+spectrum_file_maker(format_file, data_list, map_save_location, specfile, solarfile, meancm_path, wavelength_keyword, plot_maps, map_load, IF_scale, file_format,IF_plot_save_location)
+
+
+# In[ ]:
 
 
 # example I ran locally:
