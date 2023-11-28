@@ -1146,6 +1146,8 @@ def spectrum_file_maker(format_file, data_list, map_save_location, specfile, sol
     # !!!! finds the distance for a single image. Fine assumption as long as time between images isn't huge
     distance_file = np.loadtxt(data_list,dtype=str)[0]
     r = distance_finder(distance_file)
+    if file_format == 'Nemesis':
+        print('For .set file: distance between Sun and planet is '+str(r)+' AU')
 
     # can probably delete if its being read in. 
     n_bins = 2
