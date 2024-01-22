@@ -39,7 +39,7 @@ IF_plot_save_location - string, path+name of location to save I/F plots
 '''
 
 
-# In[ ]:
+# In[1]:
 
 
 import numpy as np
@@ -62,7 +62,7 @@ from scipy import ndimage
 from scipy import io
 
 
-# In[ ]:
+# In[2]:
 
 
 '''
@@ -75,6 +75,8 @@ To run this code:
     $ pip install uncertainties
 3. Run this code within that conda environment (to implement it within a jupyter notebook, use https://medium.com/@nrk25693/how-to-add-your-conda-environment-to-your-jupyter-notebook-in-just-4-steps-abeab8b8d084)
 
+Written by Emma Dahl and Kennedi White, 2023/2024
+
 There are comments flagged with !! throughout that should go into a big to-do list, or that might become issues later.
 Biggest oustanding issues:
 -in spectral extraction, issue w/ mu going above 1. I don't think those spectra are equally spaced in mu
@@ -85,7 +87,7 @@ Biggest oustanding issues:
 '''
 
 
-# In[ ]:
+# In[3]:
 
 
 # functions used within map_maker() to generate maps.
@@ -317,7 +319,7 @@ def projposolar(Re,obl,epsilon,latsol,lonsol,se_lon,eoff,poff):
 projposolar_vec = np.vectorize(projposolar)
 
 
-# In[ ]:
+# In[4]:
 
 
 def distance_finder(filename, ut_date='DATE_OBS', ut_time='TIME_OBS', target_name='Jupiter', location_code='568'):
@@ -372,7 +374,7 @@ def distance_finder(filename, ut_date='DATE_OBS', ut_time='TIME_OBS', target_nam
     return distance_au
 
 
-# In[ ]:
+# In[7]:
 
 
 def map_maker(filename, plot_maps=0,  ut_date='DATE_OBS', ut_time='TIME_OBS', target_name='Jupiter', location_code='568', pixelscale=0.115696):
@@ -625,11 +627,11 @@ def map_maker(filename, plot_maps=0,  ut_date='DATE_OBS', ut_time='TIME_OBS', ta
     return iflag,latitude_final,longitude_final,xlon,zen,szen,aphi,data,ob_lon
 
 
-# In[ ]:
+# In[8]:
 
 
 # test:
-flag,latitude_final,longitude_final,xlon,zen,szen,aphi,data,lcm = map_maker('/Users/emmadahl/Desktop/spextraction/test_data/jupiter/jcf01170125.gz.fits',plot_maps=1)
+# flag,latitude_final,longitude_final,xlon,zen,szen,aphi,data,lcm = map_maker('/Users/emmadahl/Desktop/spextraction/test_data/jupiter/jcf01170125.gz.fits',plot_maps=1)
 
 
 # In[ ]:
@@ -638,7 +640,7 @@ flag,latitude_final,longitude_final,xlon,zen,szen,aphi,data,lcm = map_maker('/Us
 
 
 
-# In[ ]:
+# In[10]:
 
 
 def spex_wavelengths(filename):
@@ -671,6 +673,10 @@ def spex_wavelengths(filename):
     elif gfilt == 'H' and osfilt == 'CH4_s':
         wavelength = 1.58
         return wavelength
+    # special case added to what was originally in idl program
+    elif gfilt == 'J' and osfilt == 'CH4_s':
+        wavelength = 1.58
+        return wavelength
     elif gfilt == 'H' and osfilt == 'CH4_l':
         wavelength = 1.69
         return wavelength
@@ -688,7 +694,7 @@ def spex_wavelengths(filename):
         return
 
 
-# In[ ]:
+# In[11]:
 
 
 def map_saver(dictionary,key,map_save_location,wl):
@@ -705,7 +711,7 @@ def map_saver(dictionary,key,map_save_location,wl):
     np.savetxt(map_save_location+key+'_'+str(wl),wl_dict[key+'_'+str(wl)])
 
 
-# In[ ]:
+# In[12]:
 
 
 # python version of congrid, an idl routine
@@ -774,7 +780,7 @@ def calibcm(data, iflag, lat, wavelength, meancm_path='/prvt/ilio/EZDisturbance/
 # Add error_finder() here. Run it within spextraction_images and return another array w/ error for each average spectrum. maybe after I/F scaling?
 
 
-# In[ ]:
+# In[13]:
 
 
 def spextraction_images(format_file, data_list, map_save_location, wavelength_keyword='OSF', plot_maps=0, map_load=0, IF_scale=0, meancm_path='/prvt/ilio/EZDisturbance/haze/', alternate_error_region=0):
@@ -997,10 +1003,7 @@ def spextraction_images(format_file, data_list, map_save_location, wavelength_ke
         iflag_spxs = map_dict[str(wavel_spxs[i_wavel])]['iflag_'+str(wavel_spxs[i_wavel])] 
 
         # once lists are loaded, extract spectra
-        wavel = wavel_spxs[i_wavel]
-        
-        
-        
+        wavel = wavel_spxs[i_wavel]        
         
         # test error before scaling
         # Error estimate:
@@ -1031,8 +1034,6 @@ def spextraction_images(format_file, data_list, map_save_location, wavelength_ke
                 plt.show()
                 
         
-        
-        
         if IF_scale == 1:
             # scale to I/F
             newscale = calibcm(spxs,iflag_spxs,lat_spxs,wavel,meancm_path) # !! assuming default meancm_path.
@@ -1046,35 +1047,6 @@ def spextraction_images(format_file, data_list, map_save_location, wavelength_ke
         else:
             error_estimate[0,i_wavel] = error_estimate[0,i_wavel]**2
         
-
-    
-        '''# Error estimate:
-        # find max extent of planet in aligned map; pull a rectangle above that region. Dimensions of this rectangle are hard-coded !!! and arbitrary based on a test image.
-        # units of extracted error value will account for IF_scale being turned on or off. 
-        max_iflag_y = np.max(np.where(iflag_spxs==1)[0]); max_iflag_x = np.max(np.where(iflag_spxs==1)[1])
-        min_iflag_y = np.min(np.where(iflag_spxs==1)[0]); min_iflag_x = np.min(np.where(iflag_spxs==1)[1])
-
-        if alternate_error_region == 1:
-            # if error region doesn't look good, use upper right
-            error_estimate[0,i_wavel] = np.std(spxs[(max_iflag_x-20):max_iflag_x, (max_iflag_y-20):max_iflag_y])**2
-            if plot_maps == 1:
-                plt.imshow(spxs[(max_iflag_x-20):max_iflag_x, (max_iflag_y-20):max_iflag_y],origin='lower')
-                print('Error estimate:',error_estimate[0,i_wavel])
-                plt.colorbar()
-                plt.title('Error region')
-                plt.show()
-            
-        else:
-            # otherwise, use lower left
-            error_estimate[0,i_wavel] = np.std(spxs[min_iflag_x:(min_iflag_x+20), min_iflag_y:(min_iflag_y+20)
-])**2
-            if plot_maps == 1:
-                plt.imshow(spxs[min_iflag_x:(min_iflag_x+20), min_iflag_y:(min_iflag_y+20)],origin='lower')
-                print('Error estimate:',error_estimate[0,i_wavel])
-                plt.colorbar()
-                plt.title('Error region')
-                plt.show()
-        '''
         
         # h = 0 # bin index, for assigning values in arrays. might need if meridian_switch = 0
         
@@ -1125,14 +1097,14 @@ def spextraction_images(format_file, data_list, map_save_location, wavelength_ke
     return extracted_spectrum_ave, extracted_lat_ave, extracted_long_ave, extracted_emiss_ave, extracted_solar_ave, extracted_azi_ave, wavelengths_sorted, n_bins, error_estimate
 
 
-# In[ ]:
+# In[14]:
 
 
 # example test
 #extracted_spectrum_ave, extracted_lat_ave, extracted_long_ave, extracted_emiss_ave, extracted_solar_ave, extracted_azi_ave, wavelengths_sorted, n_bins, error_estimate = spextraction_images('/Users/emmadahl/Desktop/spextraction/spextraction_input_binned_lat.txt', '/Users/emmadahl/Desktop/spextraction/data_list_test.txt', '/Users/emmadahl/Desktop/spextraction/test_maps_2/', map_load=1, plot_maps=0, IF_scale=0, meancm_path='/Users/emmadahl/Desktop/spextraction/meancm/')
 
 
-# In[ ]:
+# In[15]:
 
 
 # example test - used for debugging
@@ -1142,7 +1114,7 @@ def spextraction_images(format_file, data_list, map_save_location, wavelength_ke
 #map_load=1, plot_maps=1, IF_scale=0, meancm_path='/Users/emmadahl/Desktop/spextraction/meancm/',alternate_error_region=0)
 
 
-# In[ ]:
+# In[16]:
 
 
 # optional: run this and following cells to make plots of I/F spectra
@@ -1151,10 +1123,10 @@ def spextraction_images(format_file, data_list, map_save_location, wavelength_ke
 #extracted_spectrum_ave, extracted_lat_ave, extracted_long_ave, extracted_emiss_ave, extracted_solar_ave, extracted_azi_ave, wavelengths_sorted, n_bins, error_estimate = spextraction_images('/Users/emmadahl/Desktop/spextraction/spextraction_input_binned_lat.txt', '/Users/emmadahl/Desktop/spextraction/irtf_data_march_2019/2019jun1/input_list', '/Users/emmadahl/Desktop/spextraction/test_maps_dps/', map_load=1, plot_maps=1, IF_scale=1)
 
 
-# In[ ]:
+# In[22]:
 
 
-def IF_plotter(wavelengths_sorted,extracted_spectrum_ave,error_estimate,IF_plot_save_location):
+def IF_plotter(wavelengths_sorted,extracted_spectrum_ave,error_estimate,IF_plot_save_location, error_10_percent=0):
     
     '''
     plot the I/F spectra, assuming there's 2 of them. Assumes things have already been converted to I/F
@@ -1162,13 +1134,21 @@ def IF_plotter(wavelengths_sorted,extracted_spectrum_ave,error_estimate,IF_plot_
     wavelengths_sorted - list of wavelengths from spextraction_images
     extracted_spectrum_ave - array of average extracted spectra
     IF_plot_save_location - string, path+name of location to save pdf image. Make sure filename ends in .pdf
+    error_10_percent - int, 1 - will assume 10% error; 0, will use error estimate
     ''' 
+    
+
 
     fig, ax = plt.subplots(dpi=200)
     fig.set_size_inches(6, 3) # set size
 
     plt.plot(wavelengths_sorted,extracted_spectrum_ave[1],'.-',color='red',label=r'$\mu$=0.875-1.0 (close to nadir)')
     plt.plot(wavelengths_sorted,extracted_spectrum_ave[0],'.-',color='blue',label=r'$\mu$=0.5-0.625 (closer to limb)')
+    
+    if error_10_percent == 1:
+        plt.fill_between(wavelengths_sorted,            extracted_spectrum_ave[1]+0.1*extracted_spectrum_ave[1],            extracted_spectrum_ave[1]-0.1*extracted_spectrum_ave[1],color='red',alpha=0.2)
+        plt.fill_between(wavelengths_sorted,            extracted_spectrum_ave[0]-0.1*extracted_spectrum_ave[0],            extracted_spectrum_ave[0]+0.1*extracted_spectrum_ave[0],color='blue',alpha=0.2)
+
 
     plt.fill_between(wavelengths_sorted,                     extracted_spectrum_ave[1]+error_estimate[0],                     extracted_spectrum_ave[1]-error_estimate[0],color='red',alpha=0.2)
     plt.fill_between(wavelengths_sorted,                     extracted_spectrum_ave[0]-error_estimate[0],                     extracted_spectrum_ave[0]+error_estimate[0],color='blue',alpha=0.2)
@@ -1176,27 +1156,34 @@ def IF_plotter(wavelengths_sorted,extracted_spectrum_ave,error_estimate,IF_plot_
     plt.ylabel('I/F')
     plt.xlabel('Wavelength (microns)')
     plt.legend()
-
     plt.tight_layout()
     plt.subplots_adjust(hspace=0.0)
     
     # save a file containing the I/F spectra !! specific to 2 spectra
     file = open('./IF_spectrum','w')
     file.write('Saved automatically by Spextraction; contains I/F spectra \n')
-    file.write('# Wavelength (microns) | I/F, nadir | I/F, limb  | error estimate \n') # this header is specific to this setup w/ 2 spectra
-    for j in range(0,len(wavelengths_sorted)):
-        file.write(str(wavelengths_sorted[j])+' '+str(extracted_spectrum_ave[1][j])+' '+str(extracted_spectrum_ave[0][j])+' '+str(error_estimate[0][j])+' \n')
-    file.close()
+    
+    if error_10_percent == 1:
+        file.write('# Wavelength (microns) | I/F, nadir | I/F, limb  | % error \n') # this header is specific to this setup w/ 2 spectra
+        for j in range(0,len(wavelengths_sorted)):
+            file.write(str(wavelengths_sorted[j])+' '+str(extracted_spectrum_ave[1][j])+' '+str(extracted_spectrum_ave[0][j])+' '+str(error_estimate[0][j])+' \n')
+        file.close()
+        
+    else:
+        file.write('# Wavelength (microns) | I/F, nadir | I/F, limb  | error estimate from bg \n') # this header is specific to this setup w/ 2 spectra
+        for j in range(0,len(wavelengths_sorted)):
+            file.write(str(wavelengths_sorted[j])+' '+str(extracted_spectrum_ave[1][j])+' '+str(extracted_spectrum_ave[0][j])+' '+str(error_estimate[0][j])+' \n')
+        file.close()
 
     plt.savefig(IF_plot_save_location, format='pdf')
 
 
-# In[ ]:
+# In[23]:
 
 
 # !! this needs to be a subroutine for spextraction, instead of using it here
 
-def spectrum_file_maker(format_file, data_list, map_save_location, specfile, solarfile, meancm_path='/prvt/ilio/EZDisturbance/haze/', wavelength_keyword='OSF', plot_maps=0, map_load=0, IF_scale=0, file_format='Nemesis',IF_plot_save_location='./IF_plot.pdf'):
+def spectrum_file_maker(format_file, data_list, map_save_location, specfile, solarfile, meancm_path='/prvt/ilio/EZDisturbance/haze/', wavelength_keyword='OSF', plot_maps=0, map_load=0, IF_scale=0, file_format='Nemesis',IF_plot_save_location='./IF_plot.pdf', error_10_percent=1):
     '''
     Makes a NEMESIS spx file of extracted spectra. saves I/F spectra to a figure
     
@@ -1217,6 +1204,7 @@ def spectrum_file_maker(format_file, data_list, map_save_location, specfile, sol
     IF_scale = int, 1 or 0. 1, will use python version of calibcm to scale the data to I/F, will automatically make an I/F plot and save it in IF_plot_save_location.
     file_format - string, label for desired format of spectrum file. currently only coded for Nemesis spx files.
     IF_plot_save_location - string, path+name of location to save I/F plots
+    error_10_percent - int, 1 - will assume 10% error and apply that to spx file and I/F plot
     '''
     
     # pull spectra using spextraction_images
@@ -1224,7 +1212,7 @@ def spectrum_file_maker(format_file, data_list, map_save_location, specfile, sol
     
     if IF_scale == 1:
         # save I/F plots
-        IF_plotter(wavelengths,extracted_spectrum_ave,error_estimate,IF_plot_save_location)
+        IF_plotter(wavelengths,extracted_spectrum_ave,error_estimate,IF_plot_save_location,error_10_percent)
     
     # !!!! finds the distance for a single image. Fine assumption as long as time between images isn't huge
     distance_file = np.loadtxt(data_list,dtype=str)[0]
@@ -1293,9 +1281,12 @@ def spectrum_file_maker(format_file, data_list, map_save_location, specfile, sol
                 # with error estimate: 
                 if IF_scale == 1:
                     # if already converted to I/F:
-                    spectrum_value_with_error = ufloat(spec[p][j],error_estimate[0,j])*1e-7*(1/0.0001)*((F_solar[0]*1e-22)/(r**2)/math.pi/1000) #1e-22 from difference between thullier solar spec files
-                #assuming error of 10%
-                #spectrum_value_with_error = ufloat(spec[p][j],0.1*spec[p][j])*1e-7*(1/0.0001)*((F_solar[0]*1e-22)/(r**2)/math.pi/1000) #1e-22 from difference between thullier solar spec files
+                    if error_10_percent == 1:
+                        # if assume 10% error:
+                        spectrum_value_with_error = ufloat(spec[p][j],0.1*spec[p][j])*1e-7*(1/0.0001)*((F_solar[0]*1e-22)/(r**2)/math.pi/1000) #1e-22 from difference between thullier solar spec files
+                    else:
+                    # otherwise, use error_estimate. Found that that was too small when using background variance to estimate.
+                        spectrum_value_with_error = ufloat(spec[p][j],error_estimate[0,j])*1e-7*(1/0.0001)*((F_solar[0]*1e-22)/(r**2)/math.pi/1000) #1e-22 from difference between thullier solar spec files
                 elif IF_factor == 0:
                     # convert to I/F first if not done already.
                     print('Not programmed yet to calculate I/F within spectrum_file_maker()!')
@@ -1315,17 +1306,23 @@ def spectrum_file_maker(format_file, data_list, map_save_location, specfile, sol
 
 # Run spectrum_file_maker to generate spx files. Change variable names at top of file:
 
-#spectrum_file_maker(format_file, data_list, map_save_location, specfile, solarfile, meancm_path, wavelength_keyword, plot_maps, map_load, IF_scale, file_format,IF_plot_save_location)
+spectrum_file_maker(format_file, data_list, map_save_location, specfile, solarfile, meancm_path, wavelength_keyword, plot_maps, map_load, IF_scale, file_format,IF_plot_save_location)
+
+
+# In[24]:
+
+
+# example I ran locally, for debugging:
+#spectrum_file_maker('/Users/emmadahl/Desktop/spextraction/spextraction_input_binned_lat.txt', \
+#                    '/Users/emmadahl/Desktop/spextraction/irtf_data_march_2019/2019jun1/input_list', \
+#                    '/Users/emmadahl/Desktop/spextraction/test_maps/', \
+#                    '/Users/emmadahl/Desktop/irtf_spx_for_gattaca/jupiter.spx.2019jun1_v4_10percenterror',\
+#                    '/Users/emmadahl/Desktop/spextraction/kurucz_HST_IRTF.dat', \
+#                    wavelength_keyword='OSF', plot_maps=1, map_load=1, IF_scale=1, meancm_path='/Users/emmadahl/Desktop/spextraction/meancm/')
 
 
 # In[ ]:
 
 
-# example I ran locally:
-#spectrum_file_maker('/Users/emmadahl/Desktop/spextraction/spextraction_input_binned_lat.txt', \
-#                    '/Users/emmadahl/Desktop/spextraction/irtf_data_march_2019/2019jun1/input_list', \
-#                    '/Users/emmadahl/Desktop/spextraction/test_maps/', \
-#                    '/Users/emmadahl/Desktop/irtf_spx_for_gattaca/jupiter.spx.2019jun1_v3',\
-#                    '/Users/emmadahl/Desktop/spextraction/kurucz_HST_IRTF.dat', \
-#                    wavelength_keyword='OSF', plot_maps=1, map_load=1, IF_scale=1, meancm_path='/Users/emmadahl/Desktop/spextraction/meancm/')
+
 
